@@ -1,4 +1,4 @@
 SugarTi
 =======
 
-Sugar to the Titanium CLI syntax
+Sugar for the Titanium CLI syntax
