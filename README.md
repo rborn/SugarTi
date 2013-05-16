@@ -42,6 +42,16 @@ sti i5
 ~~~
 should build and run the project in the iPhone5 simulator.
 
+#####Troubleshooting
+Sometimes fruitstrap cannot install the app on the device. 
+
+~~~
+[ !! ] Unable to install package. (e800002d)
+~~~
+
+Usually disconnecting the device and connecting it again, followed by a `sti di` does the trick.
+
+If this doesn't work, clean the project and try again.
 
 #####ToDo
 
