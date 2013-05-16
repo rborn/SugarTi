@@ -1,0 +1,25 @@
+{
+  "name": "SugarTi",
+  "version": "0.0.2",
+  "description": "Sugar syntax for Titanium CLI",
+  "main": "./sti.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": "",
+  "keywords": [
+    "titanium"
+  ],
+  "author": "Dan Tamas",
+  "license": "MIT",
+  "dependencies": {
+    "colors": "~0.6.0-1",
+    "optimist": "~0.4.0",
+    "plist": "~0.4.3",
+    "xml2js": "~0.2.7"
+  },
+  "preferGlobal": true,
+  "bin": {
+    "sti": "./bin/sti"
+  }
+}
