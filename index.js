@@ -30,7 +30,7 @@ function get_tiapp(callback) {
 
 
 
-get_tiapp();
+
 
 
 fs.exists(process.cwd()+'/tiapp.xml', function(exists){
