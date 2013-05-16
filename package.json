@@ -1,5 +1,5 @@
 {
-  "name": "SugarTi",
+  "name": "sugarti",
   "version": "0.0.1",
   "description": "Sugar syntax for Titanium CLI",
   "main": "./sti.js",
