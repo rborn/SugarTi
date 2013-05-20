@@ -1,4 +1,5 @@
 var optimist = require('optimist'),
+	utils = require('./lib/utils'),
 	colors = require('colors'),
 	commands = require('./commands'),
 	fs = require('fs'),
@@ -14,13 +15,13 @@ var optimist = require('optimist'),
 function get_tiapp(callback) {
 	fs.readFile(process.cwd() + '/tiapp.xml', 'utf-8', function (err, xml) {
 		if (err !== null) {
-			console.error("\nIt seems that tiapp.xml it's not correct.\nPlease review it for possible XML errors.\n".red);
+			utils.message("\nIt seems that tiapp.xml it's not correct.\nPlease review it for possible XML errors.\n", 'error');
 			return;
 		}
 
 		parser.parseString(xml, function (err, tiapp) {
 			if (err !== null) {
-				console.error("\nIt seems that tiapp.xml it's not correct.\nPlease review it for possible XML errors.\n".red);
+				utils.message("\nIt seems that tiapp.xml it's not correct.\nPlease review it for possible XML errors.\n", 'error');
 				return;
 			}
 			!!callback && callback(tiapp['ti:app']);
@@ -39,14 +40,14 @@ fs.exists(process.cwd()+'/tiapp.xml', function(exists){
 		var cmd = argv._.length < 1 ? 'help' : argv._[0];
 
 		if (!!commands[cmd]) {
-			cmd != 'help' && console.log('Running Titanium...'.green);
+			cmd != 'help' && utils.message('Running Titanium...');
 			get_tiapp(commands[cmd]);
 		} else {
 			commands.help();
 		};
 	}
 	else {
-		console.log('\nLooks like you are not in the root of a Titanium project.\n'.red);
+		utils.message('\nIt looks like you are not in the root of a Titanium project.\n','error');
 	}
 });
 
