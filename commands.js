@@ -17,29 +17,90 @@ var PROFILES_DIR = process.env['HOME'] + '/Library/MobileDevice/Provisioning Pro
 // 	'i3, iphone3': 'Run project in iphone 3 simulator - iPhone.',
 // 	'di, deployios': 'Deploy to device without using iTunes :)',
 // 	'ri, reloadios': 'Just RELOAD the app in simulator - '+'Only the changes in JS files will have effect!'.yellow,
-// 	'c, clean':'Clean the project and start fresh.'
+// 	'ci, cleaniphone':'Clean the project and start fresh.',
+//	'deli, deleteiphone':'Delete the aplication from the simulator'
 // };
-
 var help = {
 	'i5': 'Run project in iphone 5 simulator - iPhone (Retina 4-inch).',
 	'i4': 'Run project in iphone 4 simulator - iPhone (Retina 3.5-inch).',
 	'i3': 'Run project in iphone 3 simulator - iPhone.',
 	'di': 'Deploy to device without using iTunes :)',
 	'ri': 'Just RELOAD the app in simulator - ' + 'Only the changes in JS files will have effect!'.yellow,
-	'clean': 'Clean the project and start fresh.'
+	'clean': 'Clean the iOs project and start fresh.'
 };
 
 
 
-function execute(params, callback) {
-	var prc = spawn('titanium', params);
+function getLastSession(params, callback) {
+	fs.exists(__dirname + '/session.json', function(exists) {
+		if (exists) {
+			fs.readFile(__dirname + '/session.json', function(err, data) {
+				if (!err && data) {
+					try {
+						var last_session = JSON.parse(data);
+						if (last_session && last_session) {
+							getTiapp(function(tiapp) {
+								callback(null, last_session);
+							});
+						}
 
-	prc.stdout.setEncoding('utf8');
-	prc.stdout.pipe(process.stdout);
-	prc.stderr.pipe(process.stderr);
-
-	prc.on('close', function(code) { !! callback && callback();
+					}
+					catch(err) {
+						callback(err);
+					}
+				} else {
+					callback(err);
+				}
+			});
+		} else {
+			callback('no_session');
+		}
 	});
+}
+
+
+
+function execute(params, callback) {
+
+	getTiapp(function(tiapp) {
+
+		var prc = spawn('titanium', params);
+
+		prc.stdout.setEncoding('utf8');
+		prc.stdout.pipe(process.stdout);
+		prc.stderr.pipe(process.stderr);
+
+		var gotit = false;
+
+		prc.stdout.on('data', function(data) {
+			if (!gotit) {
+				gotit = true;
+				var running_app = exec('ps -eo comm|grep ' + tiapp.name + '.app|grep -v \'grep\'', function(error, stdout, stderr) {
+
+					if (error || !stdout) {
+						utils.message('Titanium error \n' + stderr, 'error');
+						gotit = false;
+					} else {
+						getLastSession(params, function(err, res) {
+							var res = res || {};
+							res[tiapp.name] = res[tiapp.name] || {};
+
+							res[tiapp.name].app = stdout.trim()
+							fs.writeFile(__dirname + '/session.json', JSON.stringify(res), function(err) {
+								if (err) throw err;
+								utils.message('It\'s saved!', 'success');
+							});
+
+						})
+
+					}
+				});
+
+			}
+		});
+
+	});
+
 };
 
 
@@ -83,7 +144,9 @@ function getIosEnv(callback) {
 	});
 };
 
-var tailAppLog = function(tiapp) {
+
+
+function tailAppLog(tiapp) {
 	var running_app = exec('ps -eo comm|grep ' + tiapp.name + '.app|grep -v \'grep\'', function(error, stdout, stderr) {
 
 		if (error || !stdout) {
@@ -106,27 +169,29 @@ var tailAppLog = function(tiapp) {
 			});
 
 			tail.on('close', function(code) {
-				utils.message('The logger exited for some reason eith the code: ' + code);
+				utils.message('The logger exited with the code: ' + code, 'warn');
 			});
 
 		}
 	});
+};
 
-	// // find log file						
-	// shell.command('find', [process.env['HOME'] + '/Library/Application Support/iPhone Simulator/' + ios + '/Applications', '-name', tiapp.guid + '.log'], true, function (error, output) {
-	// 	if (error) {
-	// 		console.log(output.red);
-	// 		process.exit();
-	// 	}
-	// 
-	// 	// start logging
-	// 	tail = shell.command('tail', ['-f', output.replace('\n', '')], false, logWatcher);
 
-	// /Users/Dan/Library/Application Support/iPhone Simulator/6.1/Applications/AF5C1431-E5DE-4830-9AE5-7D52C5FF58E7/playas.app/playas
-	// ps -eo comm|grep playas.app|grep -v 'grep' -> return the full path to the running app
 
-	// var log_path = process.env['HOME'] + '/Library/Application Support/iPhone Simulator/' + simsdk + '/Applications/' + tiapp.guid + '.log';
-	// console.log(log_path);
+function getTiapp(callback) {
+	fs.readFile(process.cwd() + '/tiapp.xml', 'utf-8', function(err, xml) {
+		if (err !== null) {
+			utils.message("\nIt seems that tiapp.xml it's not correct.\nPlease review it for possible XML errors.\n", 'error');
+			return;
+		}
+
+		parser.parseString(xml, function(err, tiapp) {
+			if (err !== null) {
+				utils.message("\nIt seems that tiapp.xml it's not correct.\nPlease review it for possible XML errors.\n", 'error');
+				return;
+			} !! callback && callback(tiapp['ti:app']);
+		});
+	});
 };
 
 
@@ -174,10 +239,6 @@ module.exports = {
 		console.log(prompt.join("\n"));
 	},
 	clean: function(tiapp) {
-
-		// getIosEnv( function(data) {
-		// 	tailAppLog(tiapp,data.sim[0]);
-		// });
 		execute(['clean'], function() {
 			utils.message('STI done.');
 		});
@@ -219,34 +280,65 @@ module.exports = {
 		});
 	},
 	ri: function(tiapp) {
-		
-		utils.message('Trying to reload app...');
 
 		var running_app = exec('ps -eo comm|grep ' + tiapp.name + '.app|grep -v \'grep\'', function(error, stdout, stderr) {
 			var app = stdout.replace(/.app\/(.*)/, '.app').trim();
 
 			if (app) {
-				utils.message('Ok, app running, restarting...');
-				
-				var killInstruments = spawn('killall',['instruments']);
+				utils.message('Trying to reload app...\n\tOk, app running, restarting...');
+
+				var killInstruments = spawn('killall', ['instruments']);
 				fs.unlink('/tmp/sti.trace');
 
-				
-				setTimeout( function(){
-					var reload =  spawn('instruments',['-D','/tmp/sti.trace','-t','/Applications/Xcode.app/Contents/Applications/Instruments.app/Contents/PlugIns/AutomationInstrument.bundle/Contents/Resources/Automation.tracetemplate',app],{detached:true});
+				setTimeout(function() {
+					var reload = spawn('instruments', ['-D', '/tmp/sti.trace', '-t', '/Applications/Xcode.app/Contents/Applications/Instruments.app/Contents/PlugIns/AutomationInstrument.bundle/Contents/Resources/Automation.tracetemplate', app], {
+						detached: true
+					});
 
-					setTimeout(function(){
+					exec('osascript -e \'application "iPhone Simulator" activate\'');
+
+					setTimeout(function() {
 						tailAppLog(tiapp);
-					},2000);
-					
-				},500);
-				
+					},
+					2000);
 
+				},
+				500);
 
-			}
-			else {
-				utils.message('App not running, trying to restart it','warn');
+			} else {
+				utils.message('App not running, trying to restart it', 'warn');
+				getLastSession(tiapp, function(err, session) {
+					if (!err && session && session[tiapp.name] && session[tiapp.name].app) {
+
+						var reload = spawn('instruments', ['-D', '/tmp/sti.trace', '-t', '/Applications/Xcode.app/Contents/Applications/Instruments.app/Contents/PlugIns/AutomationInstrument.bundle/Contents/Resources/Automation.tracetemplate', session[tiapp.name].app], {
+							detached: true
+						});
+
+						var interval = setInterval(function() {
+
+							exec('ps -eo comm|grep "' + session[tiapp.name].app + '"|grep -v \'grep\'', function(error, stdout, stderr) {
+
+								console.log(stdout.trim() == session[tiapp.name].app);
+
+								if (stdout.trim() == session[tiapp.name].app) {
+
+									setTimeout(function() {
+										tailAppLog(tiapp);
+									},
+									1000);
+									clearInterval(interval);
+								}
+							});
+
+						},
+						1000);
+
+					} else {
+						utils.message('Cannot restart app, run a build command (sti with i3, i4 or i5)', 'error');
+					}
+				})
 			}
 		});
-	}
-}
+	},
+	getTiapp: getTiapp
+};
