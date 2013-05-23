@@ -1,3 +1,5 @@
 #!/usr/bin/env node
 
-console.log(__dirname);
+require('fs').chmod(__dirname+'/../session.json','666',function(err, res) {
+	// console.log(arguments);
+});
