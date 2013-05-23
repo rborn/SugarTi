@@ -97,6 +97,8 @@ function execute(params, callback) {
 
 			}
 		});
+		
+		prc.on('close', function(code) { !! callback && callback();	});
 
 	});
 
