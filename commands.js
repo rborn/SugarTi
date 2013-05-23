@@ -98,6 +98,9 @@ function execute(params, callback) {
 			}
 		});
 
+		prc.on('close', function(code) { !! callback && callback();
+		});
+
 	});
 
 };
@@ -204,10 +207,9 @@ function getProfiles(id, callback) {
 			return;
 		}
 
-		l = files.length;
-		while (l--) {
-			if (files[l] !== '.DS_Store') {
-				var xml = fs.readFileSync(PROFILES_DIR + files[l], 'utf8'),
+		for (var i = 0; i < files.length; i++) {
+			if (files[i] !== '.DS_Store') {
+				var xml = fs.readFileSync(PROFILES_DIR + files[i], 'utf8'),
 					parsed_plist = plist.parseStringSync(xml.substring(xml.indexOf('<?xml'), xml.indexOf('</plist>') + 8)),
 					PlistAppIdPrefix = parsed_plist.ApplicationIdentifierPrefix,
 					PlistAppId = parsed_plist.Entitlements['application-identifier'],
@@ -219,11 +221,18 @@ function getProfiles(id, callback) {
 						console.log('Trying to find another profile...');
 					} else {
 						console.log(('Found a VALID matching profile: "' + parsed_plist.Name.inverse + '" => ' + PlistAppId.inverse + '\nTrying with this one...\n\n').green);
-						callback(null, files[l].substring(0, files[l].indexOf('.')));
+						callback(null, files[i].substring(0, files[i].indexOf('.')));
+						break;
+						return;
 					}
 				}
 			}
+
 		}
+
+		callback('no_profile');
+		return;
+
 	});
 }
 
@@ -263,19 +272,26 @@ module.exports = {
 		var options = ['build', '-p', 'ios', '-T', 'device', '-b'];
 
 		getProfiles(tiapp.id, function(err, profile_id) {
-			execute(options.concat(['-P', profile_id]), function() {
-				utils.message('Trying to install on device...');
-				var app_file = process.cwd() + '/build/iphone/build/Debug-iphoneos/' + tiapp.name + '.app';
+			if (!err && profile_id) {
+				execute(options.concat(['-P', profile_id]), function() {
+					utils.message('Trying to install on device...');
+					var app_file = process.cwd() + '/build/iphone/build/Debug-iphoneos/' + tiapp.name + '.app';
 
-				fs.exists(app_file, function(exists) {
-					if (exists) {
-						install([app_file], function() {
-							process.exit();
-						});
-					}
+					fs.exists(app_file, function(exists) {
+						if (exists) {
+							install([app_file], function() {
+								process.exit();
+							});
+						}
+					});
+
 				});
-
-			});
+			} else {
+				
+				
+				
+				utils.message('It seems we could not found a valid profile for this app.\n\tBe sure that you have a valid profile for '+tiapp.id.inverse, 'error');
+			}
 		});
 	},
 	ri: function(tiapp) {
@@ -342,9 +358,9 @@ module.exports = {
 								1000);
 							} else {
 								utils.message('It seems the app doesn\'t exist anymore in the current simulator.\n\tYou will have to run a new build command (sti with i3,i4 or i5)', 'error');
-								
+
 								delete session[tiapp.name];
-								
+
 								fs.writeFile(__dirname + '/session.json', JSON.stringify(session), function(err) {});
 							}
 						})
