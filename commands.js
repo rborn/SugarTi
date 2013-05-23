@@ -207,6 +207,8 @@ function getProfiles(id, callback) {
 			return;
 		}
 
+		var found_profile =  false;
+
 		for (var i = 0; i < files.length; i++) {
 			if (files[i] !== '.DS_Store') {
 				var xml = fs.readFileSync(PROFILES_DIR + files[i], 'utf8'),
@@ -222,16 +224,15 @@ function getProfiles(id, callback) {
 					} else {
 						console.log(('Found a VALID matching profile: "' + parsed_plist.Name.inverse + '" => ' + PlistAppId.inverse + '\nTrying with this one...\n\n').green);
 						callback(null, files[i].substring(0, files[i].indexOf('.')));
+						found_profile = true;
 						break;
-						return;
 					}
 				}
 			}
 
 		}
 
-		callback('no_profile');
-		return;
+		!found_profile && callback('no_profile');
 
 	});
 }
