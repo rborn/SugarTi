@@ -27,9 +27,9 @@ Dans-MacBook-Pro:app Dan$ sti
 
 Available commands:
 
-  i5             Run project in iphone 5 simulator - iPhone (Retina 4-inch).
-  i4             Run project in iphone 4 simulator - iPhone (Retina 3.5-inch).
-  i3             Run project in iphone 3 simulator - iPhone.
+  i5             Run project in iPhone 5 simulator - iPhone (Retina 4-inch).
+  i4             Run project in iPhone 4 simulator - iPhone (Retina 3.5-inch).
+  i3             Run project in iPhone 3 simulator - iPhone.
   di             Deploy to device without using iTunes :)
 
   ri             Hot RELOAD the app in simulator - Only the changes in JS files will have effect!
@@ -66,9 +66,9 @@ Also, all the build commands are wrappers around titanium and if SugarTi fails p
 
 #####ToDo
 
-- Add more iOs options (iPad, iOs version )
-- Add android 
-- Add (maybe) sdk to use.
+- Add more iOS options (iPad, iOS version )
+- Add Android 
+- Add (maybe) SDK to use.
 
 
 #####License
