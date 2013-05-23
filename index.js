@@ -12,13 +12,6 @@ var optimist = require('optimist'),
 
 
 
-
-
-
-
-
-
-
 fs.exists(process.cwd()+'/tiapp.xml', function(exists){
 	if (exists) {
 		

@@ -78,7 +78,6 @@ function execute(params, callback) {
 				var running_app = exec('ps -eo comm|grep ' + tiapp.name + '.app|grep -v \'grep\'', function(error, stdout, stderr) {
 
 					if (error || !stdout) {
-						utils.message('Titanium error \n' + stderr, 'error');
 						gotit = false;
 					} else {
 						getLastSession(params, function(err, res) {
@@ -88,7 +87,7 @@ function execute(params, callback) {
 							res[tiapp.name].app = stdout.trim()
 							fs.writeFile(__dirname + '/session.json', JSON.stringify(res), function(err) {
 								if (err) throw err;
-								utils.message('It\'s saved!', 'success');
+								utils.message('Session saved!', 'success');
 							});
 
 						})
@@ -285,53 +284,70 @@ module.exports = {
 			var app = stdout.replace(/.app\/(.*)/, '.app').trim();
 
 			if (app) {
-				utils.message('Trying to reload app...\n\tOk, app running, restarting...');
 
-				var killInstruments = spawn('killall', ['instruments']);
-				fs.unlink('/tmp/sti.trace');
+				fs.exists(app, function(exists) {
+					if (exists) {
 
-				setTimeout(function() {
-					var reload = spawn('instruments', ['-D', '/tmp/sti.trace', '-t', '/Applications/Xcode.app/Contents/Applications/Instruments.app/Contents/PlugIns/AutomationInstrument.bundle/Contents/Resources/Automation.tracetemplate', app], {
-						detached: true
-					});
+						utils.message('Trying to reload app...\n\tOk, app running, restarting...');
 
-					exec('osascript -e \'application "iPhone Simulator" activate\'');
+						var killInstruments = spawn('killall', ['instruments']);
+						fs.unlink('/tmp/sti.trace');
 
-					setTimeout(function() {
-						tailAppLog(tiapp);
-					},
-					2000);
+						setTimeout(function() {
+							var reload = spawn('instruments', ['-D', '/tmp/sti.trace', '-t', '/Applications/Xcode.app/Contents/Applications/Instruments.app/Contents/PlugIns/AutomationInstrument.bundle/Contents/Resources/Automation.tracetemplate', app], {
+								detached: true
+							});
 
-				},
-				500);
+							exec('osascript -e \'application "iPhone Simulator" activate\'');
+
+							setTimeout(function() {
+								tailAppLog(tiapp);
+							},
+							2000);
+
+						},
+						500);
+					} else {
+						utils.message('It seems the app doesn\'t exist anymore in the current simulator.\n\tYou will have to run a new build command (sti with i3,i4 or i5)', 'error');
+					}
+				});
 
 			} else {
-				utils.message('App not running, trying to restart it', 'warn');
+				utils.message('App not running, trying to restart...', 'warn');
 				getLastSession(tiapp, function(err, session) {
 					if (!err && session && session[tiapp.name] && session[tiapp.name].app) {
 
-						var reload = spawn('instruments', ['-D', '/tmp/sti.trace', '-t', '/Applications/Xcode.app/Contents/Applications/Instruments.app/Contents/PlugIns/AutomationInstrument.bundle/Contents/Resources/Automation.tracetemplate', session[tiapp.name].app], {
-							detached: true
-						});
+						fs.exists(session[tiapp.name].app, function(exists) {
+							if (exists) {
+								var reload = spawn('instruments', ['-D', '/tmp/sti.trace', '-t', '/Applications/Xcode.app/Contents/Applications/Instruments.app/Contents/PlugIns/AutomationInstrument.bundle/Contents/Resources/Automation.tracetemplate', session[tiapp.name].app], {
+									detached: true
+								});
 
-						var interval = setInterval(function() {
+								var interval = setInterval(function() {
 
-							exec('ps -eo comm|grep "' + session[tiapp.name].app + '"|grep -v \'grep\'', function(error, stdout, stderr) {
+									exec('ps -eo comm|grep "' + session[tiapp.name].app + '"|grep -v \'grep\'', function(error, stdout, stderr) {
 
-								console.log(stdout.trim() == session[tiapp.name].app);
+										if (stdout.trim() == session[tiapp.name].app) {
 
-								if (stdout.trim() == session[tiapp.name].app) {
+											setTimeout(function() {
+												tailAppLog(tiapp);
+											},
+											1000);
+											clearInterval(interval);
+											exec('osascript -e \'application "iPhone Simulator" activate\'');
+										}
+									});
 
-									setTimeout(function() {
-										tailAppLog(tiapp);
-									},
-									1000);
-									clearInterval(interval);
-								}
-							});
-
-						},
-						1000);
+								},
+								1000);
+							} else {
+								utils.message('It seems the app doesn\'t exist anymore in the current simulator.\n\tYou will have to run a new build command (sti with i3,i4 or i5)', 'error');
+								
+								delete session[tiapp.name];
+								
+								fs.writeFile(__dirname + '/session.json', JSON.stringify(session), function(err) {});
+							}
+						})
 
 					} else {
 						utils.message('Cannot restart app, run a build command (sti with i3, i4 or i5)', 'error');
