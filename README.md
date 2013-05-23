@@ -31,8 +31,10 @@ Available commands:
   i4             Run project in iphone 4 simulator - iPhone (Retina 3.5-inch).
   i3             Run project in iphone 3 simulator - iPhone.
   di             Deploy to device without using iTunes :)
-  clean          Clean the project and start fresh.
 
+  ri             Hot RELOAD the app in simulator - Only the changes in JS files will have effect!
+  
+  clean          Clean the iOs project and start fresh.
 ~~~
 
 so 
@@ -41,6 +43,8 @@ so
 sti i5
 ~~~
 should build and run the project in the iPhone5 simulator.
+
+**sti ri** is a very handy command, as it will restart only the application without rebuilding or even restarting the simulator. **However, only the changes** in the javascript files will have effect. If you modify/add assets or settings in tiapp.xml you will have to make a new build (sti with i3,i4 or i5).
 
 #####Troubleshooting
 Sometimes fruitstrap cannot install the app on the device. 
@@ -52,6 +56,13 @@ Sometimes fruitstrap cannot install the app on the device.
 Usually disconnecting the device and connecting it again, followed by a `sti di` does the trick.
 
 If this doesn't work, clean the project and try again.
+
+#####Even more troubleshooting
+SugarTi is tested with titanium CLI 3.1.0 only. So please check that you have this version installed.
+
+Also, all the build commands are wrappers around titanium and if SugarTi fails please check that Titnaium CLI works wih direct commands first.
+
+
 
 #####ToDo
 
