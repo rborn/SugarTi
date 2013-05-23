@@ -25,7 +25,7 @@ var help = {
 	'i4': 'Run project in iphone 4 simulator - iPhone (Retina 3.5-inch).',
 	'i3': 'Run project in iphone 3 simulator - iPhone.',
 	'di': 'Deploy to device without using iTunes :)',
-	'ri': 'Just RELOAD the app in simulator - ' + 'Only the changes in JS files will have effect!'.yellow,
+	'ri': 'Hot RELOAD the app in simulator - ' + 'Only the changes in JS files will have effect!'.yellow,
 	'clean': 'Clean the iOs project and start fresh.'
 };
 
