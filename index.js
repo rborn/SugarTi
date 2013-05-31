@@ -17,9 +17,11 @@ fs.exists(process.cwd()+'/tiapp.xml', function(exists){
 		
 		var cmd = argv._.length < 1 ? 'help' : argv._[0];
 
+		(cmd == 'c') && (cmd = 'clean');
+
 		if (!!commands[cmd]) {
-			cmd != 'help' && cmd != 'ri' && utils.message('Running Titanium...');
-			commands.getTiapp(commands[cmd]);
+			cmd != 'help' && cmd != 'ri' && !(cmd == 'di' && argv.i) && utils.message('Running Titanium...');
+			commands.getTiapp(commands[cmd],argv);
 		} else {
 			commands.help();
 		};

@@ -23,10 +23,11 @@ var PROFILES_DIR = process.env['HOME'] + '/Library/MobileDevice/Provisioning Pro
 var help = {
 	'i5': 'Run project in iphone 5 simulator - iPhone (Retina 4-inch).',
 	'i4': 'Run project in iphone 4 simulator - iPhone (Retina 3.5-inch).',
-	'i3': 'Run project in iphone 3 simulator - iPhone.',
+	'i3': 'Run project in iphone 3 simulator - iPhone.\n',
 	'di': 'Deploy to device without using iTunes :)',
+	'di -i': 'Deploy to device the last build without recompiling - usefull if you switch devices\n',
 	'ri': 'Hot RELOAD the app in simulator - ' + 'Only the changes in JS files will have effect!'.yellow,
-	'clean': 'Clean the iOs project and start fresh.'
+	'c, clean': 'Clean the iOs project and start fresh.'
 };
 
 
@@ -84,13 +85,13 @@ function execute(params, callback) {
 							var res = res || {};
 							res[tiapp.name] = res[tiapp.name] || {};
 
-							res[tiapp.name].app = stdout.trim()
+							res[tiapp.name].app = stdout.trim();
 							fs.writeFile(__dirname + '/session.json', JSON.stringify(res), function(err) {
 								if (err) throw err;
 								utils.message('Session saved!', 'success');
 							});
 
-						})
+						});
 
 					}
 				});
@@ -108,15 +109,57 @@ function execute(params, callback) {
 
 
 function install(params, callback) {
+	
+	var env = process.env;
+	env['DYLD_LIBRARY_PATH'] = (__dirname +'/bin/libimobiledevice/') + (env['DYLD_LIBRARY_PATH'] ? ':'+env['DYLD_LIBRARY_PATH'] : '');
 
-	var prc = spawn(__dirname + '/bin/fruitstrap', params);
+	var libimobiledevice_config = {
+	    env: env
+	};
+	
+	
+	if (params.install_only) {
 
-	prc.stdout.setEncoding('utf8');
-	prc.stdout.pipe(process.stdout);
-	prc.stderr.pipe(process.stderr);
+		var prc = spawn(__dirname +'/bin/libimobiledevice/ideviceinstaller'	, ['-i',params.ipa], libimobiledevice_config);
 
-	prc.on('close', function(code) { !! callback && callback();
-	});
+		prc.stdout.setEncoding('utf8');
+		prc.stdout.pipe(process.stdout);
+		prc.stderr.pipe(process.stderr);
+		
+		prc.on('close', function(code) { 
+			!! callback && callback();
+		});
+		
+	}
+	else {
+		exec('xcrun -sdk iphoneos PackageApplication '+params.app+ ' -o '+params.ipa, function(err, stdout,stderr) {
+			if (!err) {
+				var prc = spawn(__dirname +'/bin/libimobiledevice/ideviceinstaller'	, ['-i',params.ipa], libimobiledevice_config);
+
+				prc.stdout.setEncoding('utf8');
+				prc.stdout.pipe(process.stdout);
+				prc.stderr.pipe(process.stderr);
+
+				prc.on('close', function(code) { 
+					!! callback && callback();
+				});
+			}
+			else {
+				console.error('xcrun packing error');
+			}
+		});
+	}
+	
+
+	
+	// var running_app = exec(__dirname +'/bin/libimobiledevice/idevice_id -l', libimobiledevice_config, function(error, stdout, stderr) {
+	// 	console.log(stdout)	;
+	// 	console.error(stderr);
+	// 
+	// });	
+	
+	
+
 };
 
 
@@ -180,7 +223,7 @@ function tailAppLog(tiapp) {
 
 
 
-function getTiapp(callback) {
+function getTiapp(callback, params) {
 	fs.readFile(process.cwd() + '/tiapp.xml', 'utf-8', function(err, xml) {
 		if (err !== null) {
 			utils.message("\nIt seems that tiapp.xml it's not correct.\nPlease review it for possible XML errors.\n", 'error');
@@ -191,7 +234,7 @@ function getTiapp(callback) {
 			if (err !== null) {
 				utils.message("\nIt seems that tiapp.xml it's not correct.\nPlease review it for possible XML errors.\n", 'error');
 				return;
-			} !! callback && callback(tiapp['ti:app']);
+			} !! callback && callback(tiapp['ti:app'],params);
 		});
 	});
 };
@@ -206,6 +249,8 @@ function getProfiles(id, callback) {
 			callback(true, 'Error searching for provisioning profiles');
 			return;
 		}
+
+		var found_profile =  false;
 
 		for (var i = 0; i < files.length; i++) {
 			if (files[i] !== '.DS_Store') {
@@ -222,16 +267,15 @@ function getProfiles(id, callback) {
 					} else {
 						console.log(('Found a VALID matching profile: "' + parsed_plist.Name.inverse + '" => ' + PlistAppId.inverse + '\nTrying with this one...\n\n').green);
 						callback(null, files[i].substring(0, files[i].indexOf('.')));
+						found_profile = true;
 						break;
-						return;
 					}
 				}
 			}
 
 		}
 
-		callback('no_profile');
-		return;
+		!found_profile && callback('no_profile');
 
 	});
 }
@@ -267,32 +311,60 @@ module.exports = {
 			utils.message('Simulator should be started now...');
 		});
 	},
-	di: function(tiapp) {
-
-		var options = ['build', '-p', 'ios', '-T', 'device', '-b'];
-
-		getProfiles(tiapp.id, function(err, profile_id) {
-			if (!err && profile_id) {
-				execute(options.concat(['-P', profile_id]), function() {
-					utils.message('Trying to install on device...');
-					var app_file = process.cwd() + '/build/iphone/build/Debug-iphoneos/' + tiapp.name + '.app';
-
-					fs.exists(app_file, function(exists) {
-						if (exists) {
-							install([app_file], function() {
-								process.exit();
-							});
-						}
+	di: function(tiapp, params) {
+		
+		if (params && params.i) {
+			utils.message('Trying to install on device...');
+			var ipa_file = process.cwd() + '/build/iphone/build/'+ tiapp.name+'.ipa';
+			
+			fs.exists(ipa_file, function(exists) {
+				if (exists) {
+					
+					utils.message('This will only install the latest built on your device without recompiling it.\n\tIf you made changes in the code since the last install you need to run \'sti di\' only.','warn');
+					install({ipa:ipa_file, install_only:true}, function() {
+						utils.message('Finshed');
+						process.exit();
 					});
+				}
+				else {
+					utils.message('Cannot find the ipa file.\n\tRun \'sti di\' instead.','error');
+					process.exit();
+				}
+			});
+		}
+		else {
+			var options = ['build', '-p', 'ios', '-T', 'device', '-b'];
 
-				});
-			} else {
+			getProfiles(tiapp.id, function(err, profile_id) {
+				if (!err && profile_id) {
+					execute(options.concat(['-P', profile_id]), function() {
+						utils.message('Trying to install on device...');
+						var app_file = process.cwd() + '/build/iphone/build/Debug-iphoneos/' + tiapp.name + '.app';
+						var ipa_file = process.cwd() + '/build/iphone/build/'+ tiapp.name+'.ipa';
+
+						fs.exists(app_file, function(exists) {
+							if (exists) {
+								install({app:app_file,ipa:ipa_file}, function() {
+									utils.message('Finshed');
+									process.exit();
+								});
+							}
+							else {
+								utils.message('Cannot find the app bundle.\n\tTry to clean the project and run \'sti di\' again.','error');
+								process.exit();
+							}
+						});
+
+					});
+				} else {
 				
 				
 				
-				utils.message('It seems we could not found a valid profile for this app.\n\tBe sure that you have a valid profile for '+tiapp.id.inverse, 'error');
-			}
-		});
+					utils.message('It seems we could not found a valid profile for this app.\n\tBe sure that you have a valid profile for '+tiapp.id.inverse, 'error');
+				}
+			});
+		}
+		
 	},
 	ri: function(tiapp) {
 
@@ -363,12 +435,12 @@ module.exports = {
 
 								fs.writeFile(__dirname + '/session.json', JSON.stringify(session), function(err) {});
 							}
-						})
+						});
 
 					} else {
 						utils.message('Cannot restart app, run a build command (sti with i3, i4 or i5)', 'error');
 					}
-				})
+				});
 			}
 		});
 	},
