@@ -4,10 +4,10 @@ var utils = require('./lib/utils'),
 	fs = require('fs'),
 	plist = require('plist'),
 	parser = new(require('xml2js')).Parser({
-	trim: true,
-	normalize: true,
-	explicitArray: false
-});
+		trim: true,
+		normalize: true,
+		explicitArray: false
+	});
 
 var PROFILES_DIR = process.env['HOME'] + '/Library/MobileDevice/Provisioning Profiles/';
 
@@ -185,6 +185,12 @@ function getIosEnv(callback) {
 			}
 		});
 
+
+		Object.keys(data.iOSProvisioningProfiles).forEach(function(kc) {
+				out[kc] = data.iOSProvisioningProfiles[kc];
+		});
+
+
 		!! callback && callback(out);
 	});
 };
@@ -259,14 +265,17 @@ function getProfiles(id, callback) {
 					PlistAppIdPrefix = parsed_plist.ApplicationIdentifierPrefix,
 					PlistAppId = parsed_plist.Entitlements['application-identifier'],
 					PlistProfile = PlistAppId.replace(PlistAppIdPrefix + '.', '').replace('.*', '');
+					
+					DeveloperName = parsed_plist.TeamName;					
 
 				if (id.indexOf(PlistProfile) >= 0) {
 					if (new Date() > new Date(parsed_plist.ExpirationDate)) {
 						console.log(('Found an EXPIRED matching profile: ' + parsed_plist.Name.inverse + ' => ' + PlistAppId.inverse));
 						console.log('Trying to find another profile...');
 					} else {
-						console.log(('Found a VALID matching profile: "' + parsed_plist.Name.inverse + '" => ' + PlistAppId.inverse + '\nTrying with this one...\n\n').green);
-						callback(null, files[i].substring(0, files[i].indexOf('.')));
+						console.log(('Found a VALID matching profile: "' + parsed_plist.Name.inverse + '" => ' + PlistAppId.inverse + ' with Developer name: "' + DeveloperName.inverse+'"\nTrying with this one...\n\n').green);
+
+						callback(null, files[i].substring(0, files[i].indexOf('.')), DeveloperName);
 						found_profile = true;
 						break;
 					}
@@ -322,7 +331,7 @@ module.exports = {
 					
 					utils.message('This will only install the latest built on your device without recompiling it.\n\tIf you made changes in the code since the last install you need to run \'sti di\' only.','warn');
 					install({ipa:ipa_file, install_only:true}, function() {
-						utils.message('Finshed');
+						utils.message('Install finished');
 						process.exit();
 					});
 				}
@@ -335,9 +344,13 @@ module.exports = {
 		else {
 			var options = ['build', '-p', 'ios', '-T', 'device', '-b'];
 
-			getProfiles(tiapp.id, function(err, profile_id) {
+			// 
+			// getIosEnv()
+
+
+			getProfiles(tiapp.id, function(err, profile_id, developer_name) {
 				if (!err && profile_id) {
-					execute(options.concat(['-P', profile_id]), function() {
+					execute(options.concat(['-P', profile_id, '-V', developer_name]), function() {
 						utils.message('Trying to install on device...');
 						var app_file = process.cwd() + '/build/iphone/build/Debug-iphoneos/' + tiapp.name + '.app';
 						var ipa_file = process.cwd() + '/build/iphone/build/'+ tiapp.name+'.ipa';
