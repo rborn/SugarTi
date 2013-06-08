@@ -264,7 +264,9 @@ function getProfiles(id, callback) {
 					parsed_plist = plist.parseStringSync(xml.substring(xml.indexOf('<?xml'), xml.indexOf('</plist>') + 8)),
 					PlistAppIdPrefix = parsed_plist.ApplicationIdentifierPrefix,
 					PlistAppId = parsed_plist.Entitlements['application-identifier'],
-					PlistProfile = PlistAppId.replace(PlistAppIdPrefix + '.', '').replace('.*', '');
+					
+					PlistProfile = PlistAppId.replace(PlistAppIdPrefix + '.', '');
+					WildcarPlistProfile = PlistAppId.replace(PlistAppIdPrefix + '.', '').replace('.*', '');
 					
 					DeveloperName = parsed_plist.TeamName;					
 
@@ -273,7 +275,7 @@ function getProfiles(id, callback) {
 						console.log(('Found an EXPIRED matching profile: ' + parsed_plist.Name.inverse + ' => ' + PlistAppId.inverse));
 						console.log('Trying to find another profile...');
 					} else {
-						console.log(('Found a VALID matching profile: "' + parsed_plist.Name.inverse + '" => ' + PlistAppId.inverse + ' with Developer name: "' + DeveloperName.inverse+'"\nTrying with this one...\n\n').green);
+						console.log(('Found a VALID matching profile:\n' + parsed_plist.Name.inverse + ' with ID ' + PlistAppId.inverse + ' and Developer name: ' + DeveloperName.inverse+'\nTrying with this one...\n\n').green);
 
 						callback(null, files[i].substring(0, files[i].indexOf('.')), DeveloperName);
 						found_profile = true;
@@ -283,6 +285,43 @@ function getProfiles(id, callback) {
 			}
 
 		}
+
+		if (!found_profile) {
+
+
+
+			for (var i = 0; i < files.length; i++) {
+				if (files[i] !== '.DS_Store') {
+					var xml = fs.readFileSync(PROFILES_DIR + files[i], 'utf8'),
+						parsed_plist = plist.parseStringSync(xml.substring(xml.indexOf('<?xml'), xml.indexOf('</plist>') + 8)),
+						PlistAppIdPrefix = parsed_plist.ApplicationIdentifierPrefix,
+						PlistAppId = parsed_plist.Entitlements['application-identifier'],
+
+						// PlistProfile = PlistAppId.replace(PlistAppIdPrefix + '.', '');
+						WildcarPlistProfile = PlistAppId.replace(PlistAppIdPrefix + '.', '').replace('.*', '');
+
+						DeveloperName = parsed_plist.TeamName;					
+
+					if (id.indexOf(WildcarPlistProfile) >= 0) {
+						if (new Date() > new Date(parsed_plist.ExpirationDate)) {
+							console.log(('Found an EXPIRED matching profile: ' + parsed_plist.Name.inverse + ' => ' + PlistAppId.inverse));
+							console.log('Trying to find another profile...');
+						} else {
+							console.log(('Found a VALID WILDCARD matching profile:\n' + parsed_plist.Name.inverse + ' with id: ' + PlistAppId.inverse + ' and Developer name: ' + DeveloperName.inverse+'\nTrying with this one...\n\n').green);
+
+							callback(null, files[i].substring(0, files[i].indexOf('.')), DeveloperName);
+							found_profile = true;
+							break;
+						}
+					}
+				}
+
+			}
+
+			
+		}
+
+
 
 		!found_profile && callback('no_profile');
 
@@ -329,7 +368,7 @@ module.exports = {
 			fs.exists(ipa_file, function(exists) {
 				if (exists) {
 					
-					utils.message('This will only install the latest built on your device without recompiling it.\n\tIf you made changes in the code since the last install you need to run \'sti di\' only.','warn');
+					utils.message('This will only install the latest built on your device without recompiling it.\n\tIf you made changes in the code since the last install you need to run ' + '\'sti di\''.white.bold +' instead.'.yellow,'warn');
 					install({ipa:ipa_file, install_only:true}, function() {
 						utils.message('Install finished');
 						process.exit();
