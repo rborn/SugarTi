@@ -3,11 +3,14 @@ var utils = require('./lib/utils'),
 	exec = require('child_process').exec,
 	fs = require('fs'),
 	plist = require('plist'),
+	prompt = require("prompt"),
 	parser = new(require('xml2js')).Parser({
 		trim: true,
 		normalize: true,
 		explicitArray: false
 	});
+
+prompt.message = prompt.delimiter = '';
 
 var PROFILES_DIR = process.env['HOME'] + '/Library/MobileDevice/Provisioning Profiles/';
 
@@ -193,7 +196,7 @@ function getIosEnv(callback) {
 		});
 
 
-		!! callback && callback(out);
+		!! callback && callback(null,out);
 	});
 };
 
@@ -252,6 +255,38 @@ function getTiapp(callback, params) {
 function getProfiles(id, callback) {
 	var profiles = [];
 
+	// 
+	
+	
+	// prompt.start();
+	// 
+	// var property = {
+	//   name: 'yesno',
+	//   message: 'are you sure?',
+	//   validator: /y[es]*|n[o]?/,
+	//   warning: 'Must respond yes or no',
+	//   default: 'no'
+	// };
+	// 
+	// //
+	// // Get the simple yes or no property
+	// //
+	// prompt.get(property, function (err, result) {
+	//   //
+	//   // Log the results.
+	//   //
+	//   console.log('Command-line input received:');
+	//   console.log('  result: ' + result.yesno);
+	// });
+	// 
+	// 
+	// getIosEnv( function(err,profs) {
+	// 	
+	// 	
+	// });
+
+
+
 	fs.readdir(PROFILES_DIR, function(err, files) {
 		if (err !== null) {
 			callback(true, 'Error searching for provisioning profiles');
@@ -269,63 +304,116 @@ function getProfiles(id, callback) {
 					
 					PlistProfile = PlistAppId.replace(PlistAppIdPrefix + '.', '');
 					WildcarPlistProfile = PlistAppId.replace(PlistAppIdPrefix + '.', '').replace('.*', '');
-					
+					UUID = parsed_plist.UUID;
+
 					DeveloperName = parsed_plist.TeamName;					
 
-				if (id.indexOf(PlistProfile) >= 0) {
+				if (id.indexOf(PlistProfile) >= 0 || id.indexOf(WildcarPlistProfile) >= 0) {
 					if (new Date() > new Date(parsed_plist.ExpirationDate)) {
 						console.log(('Found an EXPIRED matching profile: ' + parsed_plist.Name.inverse + ' => ' + PlistAppId.inverse));
 						console.log('Trying to find another profile...');
 					} else {
-						console.log(('Found a VALID matching profile:\n' + parsed_plist.Name.inverse + ' with ID ' + PlistAppId.inverse + ' and Developer name: ' + DeveloperName.inverse+'\nTrying with this one...\n\n').green);
 
-						callback(null, files[i].substring(0, files[i].indexOf('.')), DeveloperName);
-						found_profile = true;
-						break;
+						var type = 'development';
+
+						if (!parsed_plist.ProvisionedDevices || !parsed_plist.ProvisionedDevices.length) {
+							type = 'distribution';
+						} else if (parsed_plist.DeveloperCertificates[0].indexOf('Distribution:') != -1) {
+							type = 'adhoc';
+						}
+
+						type != 'distribution' && profiles.push({
+							name: parsed_plist.Name,
+							id: PlistProfile,
+							developer_name: DeveloperName,
+							UUID: UUID,
+							profile_file:files[i].substring(0, files[i].indexOf('.')),
+							type: type
+						});
+
 					}
 				}
 			}
 
 		}
 
-		if (!found_profile) {
+		// if (!found_profile) {
+		// 
+		// 
+		// 
+		// 	for (var i = 0; i < files.length; i++) {
+		// 		if (files[i] !== '.DS_Store') {
+		// 			var xml = fs.readFileSync(PROFILES_DIR + files[i], 'utf8'),
+		// 				parsed_plist = plist.parseStringSync(xml.substring(xml.indexOf('<?xml'), xml.indexOf('</plist>') + 8)),
+		// 				PlistAppIdPrefix = parsed_plist.ApplicationIdentifierPrefix,
+		// 				PlistAppId = parsed_plist.Entitlements['application-identifier'],
+		// 
+		// 				// PlistProfile = PlistAppId.replace(PlistAppIdPrefix + '.', '');
+		// 				WildcarPlistProfile = PlistAppId.replace(PlistAppIdPrefix + '.', '').replace('.*', '');
+		// 
+		// 				DeveloperName = parsed_plist.TeamName;					
+		// 
+		// 			if (id.indexOf(WildcarPlistProfile) >= 0) {
+		// 				if (new Date() > new Date(parsed_plist.ExpirationDate)) {
+		// 					console.log(('Found an EXPIRED matching profile: ' + parsed_plist.Name.inverse + ' => ' + PlistAppId.inverse));
+		// 					console.log('Trying to find another profile...');
+		// 				} else {
+		// 					console.log(('Found a VALID WILDCARD matching profile:\n' + parsed_plist.Name.inverse + ' with id: ' + PlistProfile.inverse + ' and Developer name: ' + DeveloperName.inverse+'\nTrying with this one...\n\n').green);
+		// 
+		// 					callback(null, files[i].substring(0, files[i].indexOf('.')), DeveloperName);
+		// 					found_profile = true;
+		// 					break;
+		// 				}
+		// 			}
+		// 		}
+		// 
+		// 	}
+		// 
+		// 	
+		// }
 
 
+		if (!profiles.length) {
+			callback('no_profile');
+		}
+		else {
+ 			prompt.start();
+			
+			
+			var msg = ['Multiple profiles detected, please choose one:\n'.green];
+			
+			for (var i=0; i < profiles.length; i++) {
+				msg.push('['+(i+1)+'] '+profiles[i].name.white.bold + ' with id: '.grey +profiles[i].id.white.bold +' and Developer name: '.grey +profiles[i].developer_name.white.bold);
+			};
+			
+			utils.message(msg.join('\n'));
 
-			for (var i = 0; i < files.length; i++) {
-				if (files[i] !== '.DS_Store') {
-					var xml = fs.readFileSync(PROFILES_DIR + files[i], 'utf8'),
-						parsed_plist = plist.parseStringSync(xml.substring(xml.indexOf('<?xml'), xml.indexOf('</plist>') + 8)),
-						PlistAppIdPrefix = parsed_plist.ApplicationIdentifierPrefix,
-						PlistAppId = parsed_plist.Entitlements['application-identifier'],
-
-						// PlistProfile = PlistAppId.replace(PlistAppIdPrefix + '.', '');
-						WildcarPlistProfile = PlistAppId.replace(PlistAppIdPrefix + '.', '').replace('.*', '');
-
-						DeveloperName = parsed_plist.TeamName;					
-
-					if (id.indexOf(WildcarPlistProfile) >= 0) {
-						if (new Date() > new Date(parsed_plist.ExpirationDate)) {
-							console.log(('Found an EXPIRED matching profile: ' + parsed_plist.Name.inverse + ' => ' + PlistAppId.inverse));
-							console.log('Trying to find another profile...');
-						} else {
-							console.log(('Found a VALID WILDCARD matching profile:\n' + parsed_plist.Name.inverse + ' with id: ' + PlistAppId.inverse + ' and Developer name: ' + DeveloperName.inverse+'\nTrying with this one...\n\n').green);
-
-							callback(null, files[i].substring(0, files[i].indexOf('.')), DeveloperName);
-							found_profile = true;
-							break;
-						}
+			var property = {
+				name: 'profile',
+			  	description: 'Profile :',
+			  	message: 'Please choose between 1 and '+profiles.length,
+			  	pattern: new RegExp('[1-'+profiles.length+']'),
+				required:true
+			};
+			prompt.get(property, function (err, result) {
+				if (!err) {
+					callback(null, profiles[result.profile-1].profile_file, profiles[result.profile-1].developer_name);
+				}
+				else {
+					if (err.toString() != 'Error: canceled') {
+						utils.message('Some weird error occured: \n\t'.bold+err,'error');
+						process.exit();
 					}
 				}
-
-			}
+			});
 
 			
 		}
 
-
-
-		!found_profile && callback('no_profile');
+		
+		
+		
+		// console.log(profiles);
 
 	});
 }
