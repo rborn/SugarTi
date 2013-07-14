@@ -24,9 +24,11 @@ var help = {
 	'i5': 'Run project in iphone 5 simulator - iPhone (Retina 4-inch).',
 	'i4': 'Run project in iphone 4 simulator - iPhone (Retina 3.5-inch).',
 	'i3': 'Run project in iphone 3 simulator - iPhone.\n',
+	'   -c': 'Add '+'-c'.white.bold+' to '.grey+'i5'.white.bold+', '.grey+'i4'.white.bold+' or '.grey+'i3'.white.bold+' to force clean the project before building again (shortcut to '.grey+'sti c && sti iX'.white.bold+')'.grey,
+	'   -f': 'Add '+'-f'.white.bold+' to '.grey+'i5'.white.bold+', '.grey+'i4'.white.bold+' or '.grey+'i3'.white.bold+' to force a full rebuild\n'.grey,
 	'di': 'Deploy to device without using iTunes :)',
 	'di -i': 'Deploy to device the last build without recompiling - usefull if you switch devices\n',
-	'ri': 'Hot RELOAD the app in simulator - ' + 'Only the changes in JS files will have effect!'.yellow,
+	'ri': 'Hot RELOAD the app in simulator - ' + 'Only the changes in JS files will have effect!\n'.yellow,
 	'c, clean': 'Clean the iOs project and start fresh.'
 };
 
@@ -88,7 +90,7 @@ function execute(params, callback) {
 							res[tiapp.name].app = stdout.trim();
 							fs.writeFile(__dirname + '/session.json', JSON.stringify(res), function(err) {
 								if (err) throw err;
-								utils.message('Session saved!', 'success');
+								// utils.message('Session saved!', 'success');
 							});
 
 						});
@@ -340,23 +342,22 @@ module.exports = {
 	},
 	clean: function(tiapp) {
 		execute(['clean'], function() {
-			utils.message('STI done.');
+			utils.message('Project cleaned.');
 		});
 	},
-	i5: function(tiapp) {
-
-		execute(['build', '-p', 'ios', '-D', 'development', '--retina', '--tall'], function() {
-			utils.message('Simulator should be started now...');
+	i5: function(tiapp, params) {
+		execute(['build', '-p', 'ios', '-D', 'development', '--retina', '--tall', params && params.f ?'-f':'' ], function() {
+			utils.message('The simulator should be started now...');
 		});
 	},
-	i4: function(tiapp) {
-		execute(['build', '-p', 'ios', '-D', 'development', '--retina'], function() {
-			utils.message('Simulator should be started now...');
+	i4: function(tiapp, params) {
+		execute(['build', '-p', 'ios', '-D', 'development', '--retina', params && params.f ?'-f':''], function() {
+			utils.message('The simulator should be started now...');
 		});
 	},
-	i3: function(tiapp) {
-		execute(['build', '-p', 'ios', '-D', 'development'], function() {
-			utils.message('Simulator should be started now...');
+	i3: function(tiapp, params) {
+		execute(['build', '-p', 'ios', '-D', 'development', params && params.f ?'-f':''], function() {
+			utils.message('The simulator should be started now...');
 		});
 	},
 	di: function(tiapp, params) {

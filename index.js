@@ -15,7 +15,12 @@ var optimist = require('optimist'),
 fs.exists(process.cwd()+'/tiapp.xml', function(exists){
 	if (exists) {
 		
+		
+		
+
 		var cmd = argv._.length < 1 ? 'help' : argv._[0];
+
+		(argv.c) && (cmd == 'i5' || cmd == 'i4' || cmd == 'i3') && commands.getTiapp(commands['clean'],argv);
 
 		(cmd == 'c') && (cmd = 'clean');
 
@@ -34,7 +39,11 @@ fs.exists(process.cwd()+'/tiapp.xml', function(exists){
 
 
 
-
+// Dans-MacBook-Pro-2:app Dan$ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Applications/iPhone\ Simulator.app/Contents/MacOS/iPhone\ Simulator  -SimulateDevice iPhone
+// ^C
+// Dans-MacBook-Pro-2:app Dan$ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Applications/iPhone\ Simulator.app/Contents/MacOS/iPhone\ Simulator  -SimulateDevice "iPhone (Retina 4-inch)"
+// ^C
+// Dans-MacBook-Pro-2:app Dan$ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Applications/iPhone\ Simulator.app/Contents/MacOS/iPhone\ Simulator  -SimulateDevice "iPhone (Retina 3.5-inch)"
 
 
 
