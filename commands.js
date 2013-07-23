@@ -24,15 +24,17 @@ var PROFILES_DIR = process.env['HOME'] + '/Library/MobileDevice/Provisioning Pro
 //	'deli, deleteiphone':'Delete the aplication from the simulator'
 // };
 var help = {
-	'i5': 'Run project in iphone 5 simulator - iPhone (Retina 4-inch).',
-	'i4': 'Run project in iphone 4 simulator - iPhone (Retina 3.5-inch).',
-	'i3': 'Run project in iphone 3 simulator - iPhone.\n',
+	'i5': 'Run project in the iPhone 5 simulator - iPhone (Retina 4-inch).',
+	'i4': 'Run project in the iPhone 4 simulator - iPhone (Retina 3.5-inch).',
+	'i3': 'Run project in the iPhone 3 simulator - iPhone.\n',
 	'   -c': 'Add '+'-c'.white.bold+' to '.grey+'i5'.white.bold+', '.grey+'i4'.white.bold+' or '.grey+'i3'.white.bold+' to force clean the project before building again (shortcut to '.grey+'sti c && sti iX'.white.bold+')'.grey,
 	'   -f': 'Add '+'-f'.white.bold+' to '.grey+'i5'.white.bold+', '.grey+'i4'.white.bold+' or '.grey+'i3'.white.bold+' to force a full rebuild\n'.grey,
-	'di': 'Deploy to device without using iTunes :)',
-	'di -i': 'Deploy to device the last build without recompiling - usefull if you switch devices\n',
-	'ri': 'Hot RELOAD the app in simulator - ' + 'Only the changes in JS files will have effect!\n'.yellow,
-	'c, clean': 'Clean the iOs project and start fresh.'
+	'di': 'Deploy to '+'iOs device'.white.bold+' device without using iTunes :)'.grey,
+	'di -i': 'Deploy to '+'iOs device'.white.bold+' the last build '.grey+'without'.white.bold+' recompiling - usefull if you switch devices\n'.grey,
+	'da': 'Deploy to '+'Android device'.white.bold+'\n',
+	'da -i': 'Deploy to '+'Android device'.white.bold+' the last build '.grey +'without'.white.bold+' recompiling - usefull if you switch devices\n'.grey,
+	'ri': 'Hot RELOAD the app in iOS simulator - ' + 'Only the changes in JS files will have effect!\n'.white.bold,
+	'c, clean': 'Clean the iOS project and start fresh.'
 };
 
 
@@ -114,13 +116,16 @@ function execute(params, callback) {
 
 
 function install(params, callback) {
-	
-	var env = process.env;
-	env['DYLD_LIBRARY_PATH'] = (__dirname +'/bin/libimobiledevice/') + (env['DYLD_LIBRARY_PATH'] ? ':'+env['DYLD_LIBRARY_PATH'] : '');
 
-	var libimobiledevice_config = {
-	    env: env
-	};
+
+	if (params.ipa) {
+		var env = process.env;
+		env['DYLD_LIBRARY_PATH'] = (__dirname +'/bin/libimobiledevice/') + (env['DYLD_LIBRARY_PATH'] ? ':'+env['DYLD_LIBRARY_PATH'] : '');
+
+		var libimobiledevice_config = {
+		    env: env
+		};
+	}
 	
 	
 	if (params.install_only) {
@@ -137,7 +142,7 @@ function install(params, callback) {
 		
 	}
 	else {
-		exec('xcrun -sdk iphoneos PackageApplication '+params.app+ ' -o '+params.ipa, function(err, stdout,stderr) {
+		exec('xcrun -sdk iphoneos PackageApplication "'+params.app+ '" -o "'+params.ipa+'"', function(err, stdout,stderr) {
 			if (!err) {
 				var prc = spawn(__dirname +'/bin/libimobiledevice/ideviceinstaller'	, ['-i',params.ipa], libimobiledevice_config);
 
@@ -150,7 +155,8 @@ function install(params, callback) {
 				});
 			}
 			else {
-				console.error('xcrun packing error');
+				
+				console.error('xcrun packing error '+err);
 			}
 		});
 	}
@@ -166,6 +172,11 @@ function install(params, callback) {
 	
 
 };
+
+
+
+
+
 
 
 
@@ -195,6 +206,30 @@ function getIosEnv(callback) {
 				out[kc] = data.iOSProvisioningProfiles[kc];
 		});
 
+
+		!! callback && callback(null,out);
+	});
+};
+
+
+
+function getAndroidEnv(callback) {
+	var prc = spawn('titanium', ['info', '-t', 'android', '-o', 'json']);
+	prc.stdout.setEncoding('utf8');
+
+	var buf = '';
+	prc.stdout.on('data', function(data) {
+		buf = buf + data.toString();
+	});
+
+	prc.on('close', function(code) {
+
+		var data = JSON.parse(buf);
+		var out = {};
+
+		if (data && data.android && data.android.sdkPath) {
+			out.sdkPath = data.android.sdkPath;
+		}
 
 		!! callback && callback(null,out);
 	});
@@ -451,7 +486,7 @@ module.exports = {
 	di: function(tiapp, params) {
 		
 		if (params && params.i) {
-			utils.message('Trying to install on device...');
+			utils.message('Trying to install on the iOS device...');
 			var ipa_file = process.cwd() + '/build/iphone/build/'+ tiapp.name+'.ipa';
 			
 			fs.exists(ipa_file, function(exists) {
@@ -584,6 +619,37 @@ module.exports = {
 				});
 			}
 		});
+	},
+	
+	da: function(tiapp, params) {
+			if (params && params.i) {
+				utils.message('Trying to install on the android device...');
+				
+				var apk_file = process.cwd() + '/build/iphone/build/android/bin/app.apk';
+
+				fs.exists(apk_file, function(exists) {
+					if (exists) {
+
+						utils.message('This will only install the latest built on your device without recompiling it.\n\tIf you made changes in the code since the last install you need to run ' + '\'sti di\''.white.bold +' instead.'.yellow,'warn');
+						install({ipa:ipa_file, install_only:true}, function() {
+							utils.message('Install finished');
+							process.exit();
+						});
+					}
+					else {
+						utils.message('Cannot find the ipa file.\n\tRun \'sti di\' instead.','error');
+						process.exit();
+					}				});	
+				///Volumes/Data/android-sdk-mac_x86/platform-tools/adb -d install -r /Volumes/Work/clients/tobias_group_time/gitted/mobile/build/android/bin/app.apk
+			}	
+			else {
+				utils.message('Trying to install on the android device...');
+				var options = ['build', '-p', 'android', '-T', 'device']; // we shoudl use -b and install the app ourselves?
+				execute(options, function() {
+					utils.message('The aplication should be started on the device');
+				});
+				
+			}	
 	},
 	getTiapp: getTiapp
 };
