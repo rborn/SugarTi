@@ -38,6 +38,12 @@ var help = {
 };
 
 
+// mobile web  - start a browser with the app
+/*
+titanium build -p mobileweb && ((sleep 5 && open -a "/Applications/Google Chrome.app" "http://127.0.0.1:8090/index.html") &) && (cd ./build/mobileweb && python -m SimpleHTTPServer 8090)
+*/
+
+
 
 function getLastSession(params, callback) {
 	fs.exists(__dirname + '/session.json', function(exists) {
@@ -469,17 +475,17 @@ module.exports = {
 		});
 	},
 	i5: function(tiapp, params) {
-		execute(['build', '-p', 'ios', '-D', 'development', '--retina', '--tall', params && params.f ?'-f':'' ], function() {
+		execute(['build', '-p', 'ios', '-D', 'development', '--retina', '--tall', params && params.f ?'-f':'', '-I', '6.1' ], function() {
 			utils.message('The simulator should be started now...');
 		});
 	},
 	i4: function(tiapp, params) {
-		execute(['build', '-p', 'ios', '-D', 'development', '--retina', params && params.f ?'-f':''], function() {
+		execute(['build', '-p', 'ios', '-D', 'development', '--retina', params && params.f ?'-f':'', '-I', '6.1'], function() {
 			utils.message('The simulator should be started now...');
 		});
 	},
 	i3: function(tiapp, params) {
-		execute(['build', '-p', 'ios', '-D', 'development', params && params.f ?'-f':''], function() {
+		execute(['build', '-p', 'ios', '-D', 'development', params && params.f ?'-f':'', '-I', '6.1'], function() {
 			utils.message('The simulator should be started now...');
 		});
 	},
@@ -505,7 +511,7 @@ module.exports = {
 			});
 		}
 		else {
-			var options = ['build', '-p', 'ios', '-T', 'device', '-b'];
+			var options = ['build', '-p', 'ios', '-T', 'device', '-b', '-I', '6.1'];
 
 			// 
 			// getIosEnv()

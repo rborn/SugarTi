@@ -26,14 +26,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>44</integer>
+				<integer>2</integer>
 				<key>line</key>
-				<integer>153</integer>
+				<integer>43</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>469</integer>
+			<integer>0</integer>
 		</dict>
 		<key>index.js</key>
 		<dict>
