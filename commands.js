@@ -129,7 +129,7 @@ function install(params, callback) {
 		};
 	}
 
-	if (params.install_only) {
+	if (params.ipa && params.install_only) {
 
 		var prc = spawn(__dirname + '/bin/libimobiledevice/ideviceinstaller', ['-i', params.ipa], libimobiledevice_config);
 
@@ -140,7 +140,7 @@ function install(params, callback) {
 		prc.on('close', function(code) { !! callback && callback();
 		});
 
-	} else {
+	} else if (params.ipa){
 		exec('xcrun -sdk iphoneos PackageApplication "' + params.app + '" -o "' + params.ipa + '"', function(err, stdout, stderr) {
 			if (!err) {
 				var prc = spawn(__dirname + '/bin/libimobiledevice/ideviceinstaller', ['-i', params.ipa], libimobiledevice_config);
@@ -156,6 +156,28 @@ function install(params, callback) {
 				console.error('xcrun packing error ' + err);
 			}
 		});
+	}
+	
+	
+	if (params.apk && params.install_only) {
+
+		getAndroidEnv(function(err,res) {
+			if (!err && res && res.sdkPath) {
+				var prc = spawn(res.sdkPath+'/platform-tools/adb', ['-d', 'install', '-r', params.apk]);
+
+				prc.stdout.setEncoding('utf8');
+				prc.stdout.pipe(process.stdout);
+				prc.stderr.pipe(process.stderr);
+
+				prc.on('close', function(code) { !! callback && callback();
+				});
+			}
+			
+			
+		});
+		///Volumes/Data/android-sdk-mac_x86/platform-tools/adb -d install -r /Volumes/Work/clients/tobias_group_time/gitted/mobile/build/android/bin/app.apk
+
+		
 	}
 
 	// var running_app = exec(__dirname +'/bin/libimobiledevice/idevice_id -l', libimobiledevice_config, function(error, stdout, stderr) {
@@ -543,14 +565,14 @@ module.exports = {
 		if (params && params.i) {
 			utils.message('Trying to install on the android device...');
 
-			var apk_file = process.cwd() + '/build/iphone/build/android/bin/app.apk';
+			var apk_file = process.cwd() + '/build/android/bin/app.apk';
 
 			fs.exists(apk_file, function(exists) {
 				if (exists) {
 
-					utils.message('This will only install the latest built on your device without recompiling it.\n\tIf you made changes in the code since the last install you need to run ' + '\'sti di\''.white.bold + ' instead.'.yellow, 'warn');
+					utils.message('This will only install the latest built on your device without recompiling it.\n\tIf you made changes in the code since the last install you need to run ' + '\'sti da\''.white.bold + ' instead.'.yellow, 'warn');
 					install({
-						ipa: ipa_file,
+						apk: apk_file,
 						install_only: true
 					},
 					function() {
@@ -558,11 +580,10 @@ module.exports = {
 						process.exit();
 					});
 				} else {
-					utils.message('Cannot find the ipa file.\n\tRun \'sti di\' instead.', 'error');
+					utils.message('Cannot find the apk file.\n\tRun \'sti da\' instead.', 'error');
 					process.exit();
 				}
 			});
-			///Volumes/Data/android-sdk-mac_x86/platform-tools/adb -d install -r /Volumes/Work/clients/tobias_group_time/gitted/mobile/build/android/bin/app.apk
 		} else {
 			utils.message('Trying to install on the android device...');
 			var options = ['build', '-p', 'android', '-T', 'device']; // we shoudl use -b and install the app ourselves?
