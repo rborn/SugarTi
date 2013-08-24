@@ -14,9 +14,6 @@ var optimist = require('optimist'),
 
 fs.exists(process.cwd()+'/tiapp.xml', function(exists){
 	if (exists) {
-		
-		
-		
 
 		var cmd = argv._.length < 1 ? 'help' : argv._[0];
 
