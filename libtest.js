@@ -16,13 +16,8 @@ var config = {
 
 
 var running_app = exec(__dirname +'/bin/libimobiledevice/idevice_id -l', config, function(error, stdout, stderr) {
-
-
-
-
 	console.log(stdout)	;
 	console.error(stderr);
-	
 });	
 
 // var prc = exec('xcrun -sdk iphoneos PackageApplication -v '+, params);

@@ -175,9 +175,6 @@ function install(params, callback) {
 			
 			
 		});
-		///Volumes/Data/android-sdk-mac_x86/platform-tools/adb -d install -r /Volumes/Work/clients/tobias_group_time/gitted/mobile/build/android/bin/app.apk
-
-		
 	}
 
 	// var running_app = exec(__dirname +'/bin/libimobiledevice/idevice_id -l', libimobiledevice_config, function(error, stdout, stderr) {
@@ -254,7 +251,10 @@ function tailAppLog(tiapp) {
 		}
 
 		else {
+
 			var log_file = stdout.replace(tiapp.name + '.app/' + tiapp.name + '\n', 'Documents/' + tiapp.guid + '.log').trim();
+			
+			
 			var tail = spawn('tail', ['-f', log_file]);
 
 			tail.stdout.setEncoding('utf8');
@@ -408,20 +408,27 @@ module.exports = {
 		});
 	},
 	i5: function(tiapp, params) {
-
-		console.log(params);
-
-		execute(['build', '-p', 'ios', '-D', 'development', '--retina', '--tall', params && params.f ? '-f' : ''], function() {
+		var opts = ['build', '-p', 'ios', '-D', 'development', '--retina', '--tall'];
+		
+		if (params && params.f) {
+			opts.push('-f');
+		}
+		
+		if (params && params.S) {
+			opts.push('-S',params.S);
+		}
+		
+		execute(opts, function() {
 			utils.message('The simulator should be started now...');
 		});
 	},
 	i4: function(tiapp, params) {
-		execute(['build', '-p', 'ios', '-D', 'development', '--retina', params && params.f ? '-f' : '', '-I', '6.1'], function() {
+		execute(['build', '-p', 'ios', '-D', 'development', '--retina', params && params.f ? '-f' : '', '-S', '6.1'], function() {
 			utils.message('The simulator should be started now...');
 		});
 	},
 	i3: function(tiapp, params) {
-		execute(['build', '-p', 'ios', '-D', 'development', params && params.f ? '-f' : '', '-I', '6.1'], function() {
+		execute(['build', '-p', 'ios', '-D', 'development', params && params.f ? '-f' : '', '-S', '6.1'], function() {
 			utils.message('The simulator should be started now...');
 		});
 	},
@@ -449,7 +456,8 @@ module.exports = {
 				}
 			});
 		} else {
-			var options = ['build', '-p', 'ios', '-T', 'device', '-b', '-I', '6.1'];
+			// var options = ['build', '-p', 'ios', '-T', 'device', '-b', '-I', '6.1'];
+			var options = ['build', '-p', 'ios', '-T', 'device', '-b','-D', 'development'];
 
 			getProfiles(tiapp.id, function(err, profile_id, developer_name) {
 				if (!err && profile_id) {
@@ -484,21 +492,29 @@ module.exports = {
 	},
 	ri: function(tiapp) {
 
+
 		var running_app = exec('ps -eo comm|grep ' + tiapp.name + '.app|grep -v \'grep\'', function(error, stdout, stderr) {
 			var app = stdout.replace(/.app\/(.*)/, '.app').trim();
 
+
+			console.log(app);
 			if (app) {
 
 				fs.exists(app, function(exists) {
 					if (exists) {
 
+
+
 						utils.message('Trying to reload app...\n\tOk, app running, restarting...');
 
-						var killInstruments = spawn('killall', ['instruments']);
-						fs.unlink('/tmp/sti.trace');
+						var killInstruments = spawn('killall', [tiapp.name]);
 
 						setTimeout(function() {
-							var reload = spawn('instruments', ['-D', '/tmp/sti.trace', '-t', '/Applications/Xcode.app/Contents/Applications/Instruments.app/Contents/PlugIns/AutomationInstrument.bundle/Contents/Resources/Automation.tracetemplate', app], {
+
+							var reload = spawn(__dirname + '/bin/ios-sim', ['launch',app],
+							
+							// var reload = spawn('instruments', ['-D', '/tmp/sti.trace', '-t', '/Applications/Xcode.app/Contents/Applications/Instruments.app/Contents/PlugIns/AutomationInstrument.bundle/Contents/Resources/Automation.tracetemplate', app], 
+							{
 								detached: true
 							});
 
@@ -507,7 +523,7 @@ module.exports = {
 							setTimeout(function() {
 								tailAppLog(tiapp);
 							},
-							2000);
+							3000);
 
 						},
 						500);
@@ -523,7 +539,7 @@ module.exports = {
 
 						fs.exists(session[tiapp.name].app, function(exists) {
 							if (exists) {
-								var reload = spawn('instruments', ['-D', '/tmp/sti.trace', '-t', '/Applications/Xcode.app/Contents/Applications/Instruments.app/Contents/PlugIns/AutomationInstrument.bundle/Contents/Resources/Automation.tracetemplate', session[tiapp.name].app], {
+								var reload = spawn(__dirname + '/bin/ios-sim', ['launch', session[tiapp.name].app], {
 									detached: true
 								});
 
