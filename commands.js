@@ -23,10 +23,13 @@ var PROFILES_DIR = process.env['HOME'] + '/Library/MobileDevice/Provisioning Pro
 var help = {
 	'i5': 'Run project in iphone 5 simulator - iPhone (Retina 4-inch).',
 	'i4': 'Run project in iphone 4 simulator - iPhone (Retina 3.5-inch).',
-	'i3': 'Run project in iphone 3 simulator - iPhone.',
+	'i3': 'Run project in iphone 3 simulator - iPhone.\n',
+	'ipadr' : 'Run project in ipad simulator - iPad (retina)',
+	'ipad' : 'Run project in ipad simulator - iPad\n',
 	'di': 'Deploy to device without using iTunes :)',
+	'di -i': 'Deploy to device the last build without recompiling - usefull if you switch devices\n',
 	'ri': 'Hot RELOAD the app in simulator - ' + 'Only the changes in JS files will have effect!'.yellow,
-	'clean': 'Clean the iOs project and start fresh.'
+	'c, clean': 'Clean the iOs project and start fresh.'
 };
 
 
@@ -252,6 +255,19 @@ module.exports = {
 			utils.message('STI done.');
 		});
 	},
+
+	ipad: function(tiapp){
+		execute(['build', '-p', 'ios', '-D', 'development', '-Y', 'ipad'], function() {
+			utils.message('Simulator should be started now...');
+		});
+	},
+
+	ipadr: function(tiapp){
+		execute(['build', '-p', 'ios', '-D', 'development', '-Y', 'ipad', '--retina'], function() {
+			utils.message('Simulator should be started now...');
+		});
+	},
+
 	i5: function(tiapp) {
 
 		execute(['build', '-p', 'ios', '-D', 'development', '--retina', '--tall'], function() {
